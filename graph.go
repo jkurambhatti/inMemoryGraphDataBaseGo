@@ -137,32 +137,48 @@ func (g *Graph) findVertexByName(name string) (*Vertex, bool) {
 func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
 
 	if e, ok := g.Ei[eid]; ok {
-		fmt.Println("edge exists")
+		//fmt.Println("edge exists")
 		return e, true
 	}
 	return nil, false
 }
 
-func (v *Vertex, g *Graph) out(l string) *Vertex {
-	for _, oe := range v.Out {
+func (g *Graph) query() {}
 
-		if oe == l {
-			fmt.Println(v.Vname, "    ", v.Out)
-			find
+func (v *Vertex) out(g *Graph, l string) *Vertex {
+	for _, oe := range v.Out {
+		//fmt.Println(oe)
+		// fmt.Println(v.Vname, "    ", oe)
+		if ed, ok := g.findEdgeById(oe); ok {
+			//fmt.Println("found edge")
+			if ed.Label == l {
+				fmt.Println(v.Vname, "  ", ed.Label, "   ", ed.Head)
+				nv, _ := g.findVertexByName(ed.Head)
+				return nv
+			}
 		}
 	}
+	return v
 }
 
-func (v *Vertex) ines() {
-	// for _, vert := range g.Vertices {
-	fmt.Println(v.Vname, "    ", v.In)
-	// }
+func (v *Vertex) ines(g *Graph, l string) *Vertex {
+	for _, ie := range v.In {
+		//fmt.Println(oe)
+		// fmt.Println(v.Vname, "    ", oe)
+		if ed, ok := g.findEdgeById(ie); ok {
+			fmt.Println("found edge")
+			if ed.Label == l {
+				fmt.Println(ed.Tail, "  ", ed.Label, "   ", v.Vname)
+				nv, _ := g.findVertexByName(ed.Tail)
+				return nv
+			}
+		}
+	}
+	return v
 }
 
 func (v *Vertex) all() {
-	// for _, vert := range g.Vertices {
 	fmt.Println(v.Vname, ":   out : ", v.Out, " in : ", v.In)
-	// }
 }
 
 // Note : when declaring composite types in structure you need to mention the type
@@ -279,10 +295,17 @@ func main() {
 	json.NewEncoder(f).Encode(g)
 	// g.outs()
 	// g.ines()
-	v, k := g.findVertexByName("jupiter")
+	// v, k := g.findVertexByName("hercules")
+	v, k := g.findVertexByName("pluto")
 	if k {
 		fmt.Println("found ", v.Vname)
 	}
-	v.all()
-	v.outes()
+	//	v.all()
+	//v.out(&g, "father").out(&g, "father")
+	//v.out(&g, "father").out(&g, "lives")
+	// v.out(&g, "father").out(&g, "brother").out(&g, "lives")
+	// v.out(&g, "father").out(&g, "brother").out(&g, "brother").out(&g, "pet").out(&g, "lives")
+	// v.out(&g, "pet").out(&g, "lives")
+	//v.out(&g, "battled").all()
+	v.ines(&g, "brother").out(&g, "brother").ines(&g, "father").out(&g, "mother")
 }
