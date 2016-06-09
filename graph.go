@@ -40,6 +40,11 @@ type Graph struct {
 	AutoEId  int
 }
 
+type Query struct {
+	G     *Graph
+	Verts []*Vertex
+}
+
 // Returns empty graph
 func CreateGraph() Graph {
 	var g Graph
@@ -127,15 +132,16 @@ func (g *Graph) AddEdge(e Edge) error {
 //		   not found --> nil and false
 func (g *Graph) findVertexByName(name string) (*Vertex, bool) {
 
-	if v, ok := g.Vi[name]; ok {
+	v, ok := g.Vi[name]
+	if ok {
 		// fmt.Println("vertex exists")
 		return v, true
 	}
 	return nil, false
 }
 
+// returns pointer to the edge
 func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
-
 	if e, ok := g.Ei[eid]; ok {
 		//fmt.Println("edge exists")
 		return e, true
@@ -143,41 +149,76 @@ func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
 	return nil, false
 }
 
-func (g *Graph) query() {}
+func (g *Graph) Query(s string) *Query {
+	var q Query
+	var arrVerts = make([]*Vertex, 0)
+	v, ok := g.findVertexByName(s)
+	if ok {
+		fmt.Println("found ", v.Vname)
+	}
+	arrVerts = append(arrVerts, v)
+	q.Verts = arrVerts
+	q.G = g
+	return &q
+}
 
-func (v *Vertex) out(g *Graph, l string) []*Vertex {
-	// func (v anything) out(g *Graph, l string) []*Vertex {
+func (q *Query) out(l string) *Query {
 
 	var result = make([]*Vertex, 0)
+	var output = make([]*Vertex, 0)
 
-	for _, oe := range v.Out {
-		if ed, ok := g.findEdgeById(oe); ok {
-			if ed.Label == l {
-				fmt.Println(v.Vname, "  ", ed.Label, "   ", ed.Head)
-				nv, _ := g.findVertexByName(ed.Head)
-				result = append(result, nv)
-				// return nv
+	result = q.Verts
+	for _, val := range result {
+		for _, oe := range val.Out {
+			if ed, ok := q.G.findEdgeById(oe); ok {
+				if ed.Label == l {
+					fmt.Println(val.Vname, "  ", ed.Label, "   ", ed.Head)
+					nv, _ := q.G.findVertexByName(ed.Head)
+					output = append(output, nv)
+				}
 			}
 		}
 	}
-	return result
+	q.Verts = output
+	return q
 }
 
-func (v *Vertex) ines(g *Graph, l string) []*Vertex {
+func (q *Query) in(l string) *Query {
 	var result = make([]*Vertex, 0)
-	for _, ie := range v.In {
-		if ed, ok := g.findEdgeById(ie); ok {
-			fmt.Println("found edge")
-			if ed.Label == l {
-				fmt.Println(ed.Tail, "  ", ed.Label, "   ", v.Vname)
-				nv, _ := g.findVertexByName(ed.Tail)
-				result = append(result, nv)
-				// return nv
+	var input = make([]*Vertex, 0)
+
+	result = q.Verts
+	for _, val := range result {
+		for _, ie := range val.In {
+			if ed, ok := q.G.findEdgeById(ie); ok {
+				// fmt.Println("found edge")
+				if ed.Label == l {
+					fmt.Println(ed.Tail, "  ", ed.Label, "   ", val.Vname)
+					nv, _ := q.G.findVertexByName(ed.Tail)
+					input = append(input, nv)
+				}
 			}
 		}
 	}
-	return result
+	q.Verts = input
+	return q
 }
+
+// func (v *Vertex) ines(g *Graph, l string) []*Vertex {
+// 	var result = make([]*Vertex, 0)
+// 	for _, ie := range v.In {
+// 		if ed, ok := g.findEdgeById(ie); ok {
+// 			fmt.Println("found edge")
+// 			if ed.Label == l {
+// 				fmt.Println(ed.Tail, "  ", ed.Label, "   ", v.Vname)
+// 				nv, _ := g.findVertexByName(ed.Tail)
+// 				result = append(result, nv)
+// 				// return nv
+// 			}
+// 		}
+// 	}
+// 	return result
+// }
 
 func (v *Vertex) all() {
 	fmt.Println(v.Vname, ":   out : ", v.Out, " in : ", v.In)
@@ -300,11 +341,11 @@ func main() {
 	// v, k := g.findVertexByName("hercules")
 	// v, k := g.findVertexByName("pluto")
 	// v, k := g.findVertexByName("jupiter")
-	v, k := g.findVertexByName("neptune")
+	// v, k := g.findVertexByName("neptune")
 
-	if k {
-		fmt.Println("found ", v.Vname)
-	}
+	// if k {
+	// 	fmt.Println("found ", v.Vname)
+	// }
 	//	v.all()
 	//v.out(&g, "father").out(&g, "father")
 	//v.out(&g, "father").out(&g, "lives")
@@ -313,5 +354,6 @@ func main() {
 	// v.out(&g, "pet").out(&g, "lives")
 	// v.out(&g, "battled")
 	// v.ines(&g, "brother").out(&g, "brother").ines(&g, "father").out(&g, "mother")
-	v.out(&g, "brother")
+	// v.out(&g, "brother")
+	g.Query("jupiter").in("father").out("battled").in("pet").out("lives")
 }
