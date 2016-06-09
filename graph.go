@@ -145,36 +145,38 @@ func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
 
 func (g *Graph) query() {}
 
-func (v *Vertex) out(g *Graph, l string) *Vertex {
+func (v *Vertex) out(g *Graph, l string) []*Vertex {
+	// func (v anything) out(g *Graph, l string) []*Vertex {
+
+	var result = make([]*Vertex, 0)
+
 	for _, oe := range v.Out {
-		//fmt.Println(oe)
-		// fmt.Println(v.Vname, "    ", oe)
 		if ed, ok := g.findEdgeById(oe); ok {
-			//fmt.Println("found edge")
 			if ed.Label == l {
 				fmt.Println(v.Vname, "  ", ed.Label, "   ", ed.Head)
 				nv, _ := g.findVertexByName(ed.Head)
-				return nv
+				result = append(result, nv)
+				// return nv
 			}
 		}
 	}
-	return v
+	return result
 }
 
-func (v *Vertex) ines(g *Graph, l string) *Vertex {
+func (v *Vertex) ines(g *Graph, l string) []*Vertex {
+	var result = make([]*Vertex, 0)
 	for _, ie := range v.In {
-		//fmt.Println(oe)
-		// fmt.Println(v.Vname, "    ", oe)
 		if ed, ok := g.findEdgeById(ie); ok {
 			fmt.Println("found edge")
 			if ed.Label == l {
 				fmt.Println(ed.Tail, "  ", ed.Label, "   ", v.Vname)
 				nv, _ := g.findVertexByName(ed.Tail)
-				return nv
+				result = append(result, nv)
+				// return nv
 			}
 		}
 	}
-	return v
+	return result
 }
 
 func (v *Vertex) all() {
@@ -296,7 +298,10 @@ func main() {
 	// g.outs()
 	// g.ines()
 	// v, k := g.findVertexByName("hercules")
-	v, k := g.findVertexByName("pluto")
+	// v, k := g.findVertexByName("pluto")
+	// v, k := g.findVertexByName("jupiter")
+	v, k := g.findVertexByName("neptune")
+
 	if k {
 		fmt.Println("found ", v.Vname)
 	}
@@ -306,6 +311,7 @@ func main() {
 	// v.out(&g, "father").out(&g, "brother").out(&g, "lives")
 	// v.out(&g, "father").out(&g, "brother").out(&g, "brother").out(&g, "pet").out(&g, "lives")
 	// v.out(&g, "pet").out(&g, "lives")
-	//v.out(&g, "battled").all()
-	v.ines(&g, "brother").out(&g, "brother").ines(&g, "father").out(&g, "mother")
+	// v.out(&g, "battled")
+	// v.ines(&g, "brother").out(&g, "brother").ines(&g, "father").out(&g, "mother")
+	v.out(&g, "brother")
 }
