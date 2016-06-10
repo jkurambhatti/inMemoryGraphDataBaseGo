@@ -43,6 +43,7 @@ type Graph struct {
 type Query struct {
 	G     *Graph
 	Verts []*Vertex
+	Root  string
 }
 
 // Returns empty graph
@@ -149,6 +150,7 @@ func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
 	return nil, false
 }
 
+// takes name of the node ; returns Query structure for cascading
 func (g *Graph) Query(s string) *Query {
 	var q Query
 	var arrVerts = make([]*Vertex, 0)
@@ -159,6 +161,7 @@ func (g *Graph) Query(s string) *Query {
 	arrVerts = append(arrVerts, v)
 	q.Verts = arrVerts
 	q.G = g
+	q.Root = s
 	return &q
 }
 
@@ -183,6 +186,12 @@ func (q *Query) out(l string) *Query {
 	return q
 }
 
+func (q *Query) value() {
+	for _, v := range q.Verts {
+		fmt.Printf("%+v\n", *v)
+	}
+}
+
 func (q *Query) in(l string) *Query {
 	var result = make([]*Vertex, 0)
 	var input = make([]*Vertex, 0)
@@ -204,24 +213,49 @@ func (q *Query) in(l string) *Query {
 	return q
 }
 
-// func (v *Vertex) ines(g *Graph, l string) []*Vertex {
-// 	var result = make([]*Vertex, 0)
-// 	for _, ie := range v.In {
-// 		if ed, ok := g.findEdgeById(ie); ok {
-// 			fmt.Println("found edge")
-// 			if ed.Label == l {
-// 				fmt.Println(ed.Tail, "  ", ed.Label, "   ", v.Vname)
-// 				nv, _ := g.findVertexByName(ed.Tail)
-// 				result = append(result, nv)
-// 				// return nv
-// 			}
-// 		}
-// 	}
-// 	return result
-// }
+func (q *Query) all() {
 
-func (v *Vertex) all() {
-	fmt.Println(v.Vname, ":   out : ", v.Out, " in : ", v.In)
+	arrVerts := q.Verts
+
+	for _, ver := range arrVerts {
+		ineds := ver.In
+		outeds := ver.Out
+		fmt.Println("all in <-- relations of ", ver.Vname)
+		for _, in := range ineds {
+			if ed, err := q.G.findEdgeById(in); err {
+				fmt.Println(ed.Label)
+			}
+
+		}
+		fmt.Println("all out --> relations of ", ver.Vname)
+		for _, out := range outeds {
+			if ed, err := q.G.findEdgeById(out); err {
+				fmt.Println(ed.Label)
+			}
+		}
+
+	}
+
+	// ver, ok := q.G.findVertexByName(q.Root)
+
+	// if ok {
+	// 	ineds := ver.In
+	// 	outeds := ver.Out
+	// 	fmt.Println("all relations of ", q.Root)
+	// 	for _, in := range ineds {
+	// 		if ed, err := q.G.findEdgeById(in); err {
+	// 			fmt.Println(ed.Label)
+	// 		}
+
+	// 	}
+	// 	for _, out := range outeds {
+	// 		if ed, err := q.G.findEdgeById(out); err {
+	// 			fmt.Println(ed.Label)
+	// 		}
+	// 	}
+	// } else {
+	// 	fmt.Println("invalid input")
+	// }
 }
 
 // Note : when declaring composite types in structure you need to mention the type
@@ -355,5 +389,10 @@ func main() {
 	// v.out(&g, "battled")
 	// v.ines(&g, "brother").out(&g, "brother").ines(&g, "father").out(&g, "mother")
 	// v.out(&g, "brother")
-	g.Query("jupiter").in("father").out("battled").in("pet").out("lives")
+	// g.Query("jupiter").in("father").out("battled").in("pet").out("lives")
+	// g.Query("hydra").in("battled")
+	// g.Query("tartarus").in("lives").in("pet").out("lives")
+	// g.Query("hercules").out("battled").out("lives").all()
+	g.Query("jupiter").out("lives").all()
+	//	g.Query("jupiter").out("brother").out("lives").value()
 }
