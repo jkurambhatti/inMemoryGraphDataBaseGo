@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 	//	"strconv"
 )
 
@@ -12,7 +13,7 @@ type anything interface{}
 
 type Edge struct {
 	Eid         string
-	Label       string
+	Relation    string
 	Tail        string
 	Head        string
 	Description string
@@ -20,12 +21,12 @@ type Edge struct {
 }
 
 type Vertex struct {
-	Vid   string
-	Vname string
-	Label string
-	In    []string
-	Out   []string
-	Props map[string]anything
+	Vid      string
+	Vname    string
+	Relation string
+	In       []string
+	Out      []string
+	Props    map[string]anything
 }
 
 type VertexIndex map[string]*Vertex
@@ -41,10 +42,19 @@ type Graph struct {
 }
 
 type Query struct {
-	G     *Graph
-	Verts []*Vertex
-	Root  string
+	G      *Graph
+	Verts  []*Vertex
+	Root   string
+	Qstate QryState
 }
+
+type QryState struct {
+	State map[string]bool
+	Taken int
+	As    map[string]*Vertex
+}
+
+type filterFunc func(v Vertex)
 
 // Returns empty graph
 func CreateGraph() Graph {
@@ -63,9 +73,9 @@ func NewVertex() Vertex {
 }
 
 // Setter
-func (v *Vertex) SetVertexValues(vname string, label string, in []string, out []string, props map[string]anything) {
+func (v *Vertex) SetVertexValues(vname string, Relation string, in []string, out []string, props map[string]anything) {
 	v.Vname = vname
-	v.Label = label
+	v.Relation = Relation
 	v.In = in
 	v.Out = out
 	v.Props = props
@@ -78,12 +88,12 @@ func NewEdge() Edge {
 }
 
 // Setter
-func (e *Edge) SetEdgeValues(label string, head string, tail string, props map[string]anything) {
-	e.Label = label
+func (e *Edge) SetEdgeValues(Relation string, head string, tail string, props map[string]anything) {
+	e.Relation = Relation
 	e.Head = head
 	e.Tail = tail
 	e.Props = props
-	e.Description = fmt.Sprintf("%s------- %s ---->>>-----%s ", tail, label, head)
+	e.Description = fmt.Sprintf("%s------- %s ---->>>-----%s ", tail, Relation, head)
 	//fmt.Println(e.Description)
 }
 
@@ -150,7 +160,7 @@ func (g *Graph) findEdgeById(eid string) (*Edge, bool) {
 	return nil, false
 }
 
-// takes name of the node ; returns Query structure for cascading
+// takes name of the node ; returns Query structure for cascading queries
 func (g *Graph) Query(s string) *Query {
 	var q Query
 	var arrVerts = make([]*Vertex, 0)
@@ -165,6 +175,7 @@ func (g *Graph) Query(s string) *Query {
 	return &q
 }
 
+// traverses all the outgoing edges having the Relation
 func (q *Query) out(l string) *Query {
 
 	var result = make([]*Vertex, 0)
@@ -174,8 +185,8 @@ func (q *Query) out(l string) *Query {
 	for _, val := range result {
 		for _, oe := range val.Out {
 			if ed, ok := q.G.findEdgeById(oe); ok {
-				if ed.Label == l {
-					fmt.Println(val.Vname, "  ", ed.Label, "   ", ed.Head)
+				if ed.Relation == l {
+					fmt.Println(val.Vname, "  ", ed.Relation, "   ", ed.Head)
 					nv, _ := q.G.findVertexByName(ed.Head)
 					output = append(output, nv)
 				}
@@ -186,12 +197,84 @@ func (q *Query) out(l string) *Query {
 	return q
 }
 
+// saves all unique vertices into state of query and also print the vertex names
+func (q *Query) unique() *Query {
+	// save unique vertex and discard duplicate entries
+	fmt.Println("unique elements :")
+	var arvrts = make([]*Vertex, 0)
+	q.Qstate.State = make(map[string]bool)
+	for _, vp := range q.Verts {
+		if !(q.Qstate.State[vp.Vname]) {
+			q.Qstate.State[vp.Vname] = true
+			arvrts = append(arvrts, vp)
+			// print name of all unique vertices
+			// fmt.Println(vp.Vname)
+		}
+	}
+	q.Verts = arvrts
+	for j, m := range q.Verts {
+		fmt.Println(j, m.Vname)
+	}
+	return q
+}
+
+// gives out only limited output
+func (q *Query) take(limit int) *Query {
+	fmt.Println("take : ", limit)
+	var arvrts = make([]*Vertex, 0)
+	if limit < len(q.Verts) {
+		arvrts = q.Verts[:limit]
+		q.Verts = arvrts
+	}
+	for j, m := range q.Verts {
+		fmt.Println(j, m.Vname)
+	}
+	return q
+}
+
+func (q *Query) except(name string) *Query {
+	fmt.Println("except :", name)
+
+	for i, vp := range q.Verts {
+		if vp.Vname == name {
+			q.Verts = append(q.Verts[:i], q.Verts[i+1:]...)
+		}
+	}
+	for j, m := range q.Verts {
+		fmt.Println(j, m.Vname)
+	}
+	return q
+}
+
+func (q *Query) filter(a func(v Vertex) bool) {
+	for i, v := range q.Verts {
+		if !a(*v) {
+			q.Verts = append(q.Verts[:i], q.Verts[i+1:]...)
+		}
+	}
+	for j, m := range q.Verts {
+		fmt.Println(j, m.Vname)
+	}
+
+}
+
+// prints total information of the node
 func (q *Query) value() {
 	for _, v := range q.Verts {
 		fmt.Printf("%+v\n", *v)
 	}
 }
 
+// prints the value of given specific property
+func (q *Query) property(key string) {
+	for _, v := range q.Verts {
+		if value, ok := v.Props[key]; ok {
+			fmt.Println(key, ": ", value)
+		}
+	}
+}
+
+// returns all incoming edges satisfying the relationship
 func (q *Query) in(l string) *Query {
 	var result = make([]*Vertex, 0)
 	var input = make([]*Vertex, 0)
@@ -201,8 +284,8 @@ func (q *Query) in(l string) *Query {
 		for _, ie := range val.In {
 			if ed, ok := q.G.findEdgeById(ie); ok {
 				// fmt.Println("found edge")
-				if ed.Label == l {
-					fmt.Println(ed.Tail, "  ", ed.Label, "   ", val.Vname)
+				if ed.Relation == l {
+					fmt.Println(ed.Tail, "  ", ed.Relation, "   ", val.Vname)
 					nv, _ := q.G.findVertexByName(ed.Tail)
 					input = append(input, nv)
 				}
@@ -213,6 +296,7 @@ func (q *Query) in(l string) *Query {
 	return q
 }
 
+// prints all edges directly  connected to the vertex/vertices
 func (q *Query) all() {
 
 	arrVerts := q.Verts
@@ -223,39 +307,18 @@ func (q *Query) all() {
 		fmt.Println("all in <-- relations of ", ver.Vname)
 		for _, in := range ineds {
 			if ed, err := q.G.findEdgeById(in); err {
-				fmt.Println(ed.Label)
+				fmt.Println(ed.Relation)
 			}
 
 		}
 		fmt.Println("all out --> relations of ", ver.Vname)
 		for _, out := range outeds {
 			if ed, err := q.G.findEdgeById(out); err {
-				fmt.Println(ed.Label)
+				fmt.Println(ed.Relation)
 			}
 		}
 
 	}
-
-	// ver, ok := q.G.findVertexByName(q.Root)
-
-	// if ok {
-	// 	ineds := ver.In
-	// 	outeds := ver.Out
-	// 	fmt.Println("all relations of ", q.Root)
-	// 	for _, in := range ineds {
-	// 		if ed, err := q.G.findEdgeById(in); err {
-	// 			fmt.Println(ed.Label)
-	// 		}
-
-	// 	}
-	// 	for _, out := range outeds {
-	// 		if ed, err := q.G.findEdgeById(out); err {
-	// 			fmt.Println(ed.Label)
-	// 		}
-	// 	}
-	// } else {
-	// 	fmt.Println("invalid input")
-	// }
 }
 
 // Note : when declaring composite types in structure you need to mention the type
@@ -325,7 +388,7 @@ func main() {
 
 	// e1.SetEdgeValues([]string{"FounderOf", "CEOof"}, v1.Vid, v2.Vid, nil)
 	// e2.SetEdgeValues([]string{"studenOf", "internOf"}, v2.Vid, v3.Vid, nil)
-	//e4.SetEdgeValues(label, head, tail, props)
+	//e4.SetEdgeValues(Relation, head, tail, props)
 	e1.SetEdgeValues("father", v1.Vname, v4.Vname, nil)
 	e2.SetEdgeValues("lives", v2.Vname, v4.Vname, map[string]anything{"reason": "loves fresh breezes"})
 	e3.SetEdgeValues("father", v4.Vname, v6.Vname, nil)
@@ -381,8 +444,8 @@ func main() {
 	// 	fmt.Println("found ", v.Vname)
 	// }
 	//	v.all()
-	//v.out(&g, "father").out(&g, "father")
-	//v.out(&g, "father").out(&g, "lives")
+	// v.out(&g, "father").out(&g, "father")
+	// v.out(&g, "father").out(&g, "lives")
 	// v.out(&g, "father").out(&g, "brother").out(&g, "lives")
 	// v.out(&g, "father").out(&g, "brother").out(&g, "brother").out(&g, "pet").out(&g, "lives")
 	// v.out(&g, "pet").out(&g, "lives")
@@ -393,6 +456,15 @@ func main() {
 	// g.Query("hydra").in("battled")
 	// g.Query("tartarus").in("lives").in("pet").out("lives")
 	// g.Query("hercules").out("battled").out("lives").all()
-	g.Query("jupiter").out("lives").all()
+	// g.Query("jupiter").out("lives").all()
+	nowtime := time.Now()
+	// g.Query("hercules").out("father").out("brother").out("brother").unique().take(2).except("jupi").filter()
+	g.Query("hercules").out("father").out("brother").out("brother").unique().take(2).except("jupi").filter(func(v Vertex) bool {
+		if v.Props["age"] == 5000 {
+			return true
+		}
+		return false
+	})
+	fmt.Println("query solved in :", time.Since(nowtime))
 	//	g.Query("jupiter").out("brother").out("lives").value()
 }
